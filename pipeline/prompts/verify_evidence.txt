@@ -1,0 +1,12 @@
+Inspect only the attached vessel observation for the requested question.
+Do not invent archive facts. A candidate name in a question is not archive evidence.
+Return one JSON object with observed (attribute to value), visibility (visible,
+partial or unknown), and optionally observed_hull_number, readability and alternatives.
+For hull transcription, copy visible characters independently; use ? for uncertain
+characters and never complete text from an expected identity. Unreadable text is
+missing information, not evidence that the vessel has no marking or is out of archive.
+Do not return confidence probabilities, claim IDs, request IDs or source ownership;
+those are assigned by the executor. Unknown attributes remain unknown.
+Question: {{question}}
+Requested fields: {{fields}}
+View: {{view_id}}

@@ -1,0 +1,306 @@
+# ═══════════════════════════════════════════
+# Ship Hull Agent — 全局配置文件
+# ═══════════════════════════════════════════
+
+# 对话模型
+llm:
+  model: "Qwen/Qwen3-VL-4B-AWQ"
+  # Keep the base AWQ model available. Set use_lora=true only after the adapter is served.
+  use_lora: false
+  lora_model: "vessel-evidence-lora"
+  lora_base_url: "http://localhost:7892/v1"
+  fallback_model: "Qwen/Qwen3-VL-4B-AWQ"
+  fallback_base_url: "http://localhost:7893/v1"
+  fallback_to_base: true
+  # Online Agent keeps the original short JSON contract. The structured schema
+  # is used by the offline LoRA annotation/evaluation workflow.
+  output_schema: "simple"
+  fallback_output_schema: "structured"
+  fallback_output_schema_enabled: true
+  enable_thinking: false
+  structured_max_tokens: 768
+  simple_max_tokens: 256
+  api_key: "YOUR_API_KEY"
+  base_url: "http://localhost:7893/v1"
+  temperature: 0.0
+  request_timeout_seconds: 90
+  max_tokens: 256
+  repetition_penalty: 1.05
+  max_retries: 1
+
+# Embedding 模型
+embed:
+  model: "Qwen3-Embedding-0.6B"
+  api_key: "YOUR_API_KEY"
+  base_url: "http://localhost:7892/v1"
+
+# Direct image-to-image archive matcher served by vLLM's /score endpoint.
+visual_reranker:
+  model: "Qwen/Qwen3-VL-Reranker-2B"
+  api_key: "YOUR_API_KEY"
+  base_url: "http://localhost:7894"
+  request_timeout_seconds: 120
+  max_retries: 1
+  request_batch_size: 8
+  jpeg_quality: 90
+  instruction: "Determine whether the query image and document image depict the same physical vessel. Use stable vessel structure and markings while ignoring viewpoint, scale, illumination, water, and background differences."
+
+# RAG 检索参数
+retrieval:
+  top_k: 3
+  score_threshold: 0.5
+
+# 向量库配置
+vector_store:
+  persist_path: "./vector_store"
+  auto_rebuild: false
+
+# 数据库后端配置（csv 或 sqlite）
+database:
+  # CSV stores the editable identity catalogue; SQLite stores runtime memory.
+  backend: "csv"
+  csv_path: "./data/ships.csv"
+  sqlite_path: "./data/ships.db"
+  memory_sqlite_path: "./data/ship_memory.db"
+
+# 应用配置
+app:
+  log_level: "INFO"
+  ship_db_path: "./data/ships.csv"
+
+# Web 服务配置
+web:
+  host: "0.0.0.0"
+  port: 8000
+
+# 视频 Demo 配置
+demo_video:
+  dir: "./demovid"          # 视频存储目录
+  output_dir: "./demo_output"  # Demo 输出目录
+  allowed_extensions:
+    - ".mp4"
+    - ".avi"
+    - ".mkv"
+    - ".mov"
+    - ".flv"
+    - ".wmv"
+    - ".webm"
+  max_file_size_mb: 500     # 最大上传文件大小 (MB)
+
+# 摄像头 Demo 配置
+camera_demo:
+  stream_mode: "mjpeg"       # 前端→后端编码: "mjpeg"（逐帧JPEG）或 "h264"（MediaRecorder连续编码）
+
+# Pipeline 视频处理流水线配置
+pipeline:
+  concurrent_mode: false         #并发配置
+  target_fps: 0                # 主循环帧率上限（0=自动匹配源视频 FPS，建议 15-30）
+  max_concurrent: 4
+  max_queued_frames: 30
+  process_every_n_frames: 15
+  output_dir: "./output"
+  save_output_video: false      # 是否保存推理结果视频（true=保存到 demo_video.output_dir）
+  save_screenshots: true
+  prompt_mode: "detailed"
+  enable_refresh: false
+  skip_refresh_matched: false  # 开启后，精确匹配过的 track 不再参与定时刷新，只刷新未匹配的
+  gap_num: 150
+  demo: false
+  yolo_model: "yolov8n.pt"
+  device: ""
+  conf_threshold: 0.25
+  detect_every_n_frames: 2
+  tracker: "bytetrack"
+  tracker_params:
+    track_high_thresh: 0.5
+    track_low_thresh: 0.05
+    new_track_thresh: 0.6
+    track_buffer: 90
+    match_thresh: 0.5
+  detect_classes:
+    - 8
+  max_stale_frames: 300
+
+# Reproducible experiment and ablation configuration
+experiment:
+  enabled: false
+  run_name: "default"
+  # central_vlm is the default; legacy remains available for compatibility.
+  controller_mode: "central_vlm"
+  output_dir: "./experiment_outputs/final_public_v1"
+  save_jsonl: true
+  save_crops: true
+  crop_jpeg_quality: 90
+  seed: 42
+  split: "test"
+
+  # none | majority | tel | tel_archive | full
+  memory_mode: "full"
+  # recognize_once | fixed_interval | uncertainty | uncertainty_archive | experience | full
+  policy_mode: "full"
+
+  quality:
+    enabled: true
+    min_query_quality: 0.25
+    brightness_weight: 0.12
+    blur_weight: 0.24
+    contrast_weight: 0.12
+    clipping_weight: 0.07
+    scale_weight: 0.30
+    confidence_weight: 0.15
+    blur_reference: 300.0
+    contrast_reference: 64.0
+    target_area_reference: 0.08
+    dark_clip: 5
+    bright_clip: 250
+    max_clipped_fraction: 0.35
+
+  temporal_ledger:
+    enabled: true
+    decay: 0.97
+    min_support: 0.30
+
+  entity_reconciliation:
+    enabled: true
+    max_gap_frames: 180
+    min_gap_frames: 1
+    min_appearance_similarity: 0.78
+    max_center_distance: 0.35
+    max_log_area_ratio: 1.20
+    min_association_score: 0.72
+    appearance_weight: 0.70
+    position_weight: 0.20
+    scale_weight: 0.10
+    appearance_ema: 0.80
+    max_appearance_prototypes: 6
+    appearance_novelty_threshold: 0.90
+
+  archive:
+    enabled: true
+    # Absolute structure-semantic scores are fused across frames.
+    # Direct cosine similarity between observed and archived structure descriptions.
+    structure_in_archive_threshold: 0.735
+    structure_uncertain_threshold: 0.70
+    structure_min_margin: 0.00
+    # A single high-confidence structure match may verify identity.
+    # Gray-zone re-observation is controlled separately by experiment.policy.
+    min_structure_observations: 1
+    strong_single_threshold: 0.88
+    consistent_in_archive_threshold: 0.73
+    min_consistent_observations: 2
+    min_rejection_observations: 2
+    min_consistency_ratio: 0.67
+    preserve_verified_identity: true
+    conflict_observations_to_downgrade: 2
+    hull_structure_conflict_threshold: 0.85
+    hull_structure_conflict_margin: 0.08
+    hull_structure_min_consistency: 0.65
+
+  # Visual archive matching backend and decision gates.
+  visual_archive:
+    enabled: false
+    # fused: text/archive and visual evidence; visual_only: text is logged but never used for identity matching.
+    identity_decision_mode: fused
+    # dinov2: local embedding retrieval; qwen_vl_reranker: direct comparison with all archive images.
+    backend: qwen_vl_reranker
+    decision_enabled: false
+    open_set_enabled: false
+    fail_open: true
+    archive_root: data/archive/visual_prototypes
+    model_repo: models/dinov2_torch_home/hub/dinov2-main
+    weights: models/dinov2_torch_home/hub/checkpoints/dinov2_vits14_pretrain.pth
+    device: auto
+    input_size: 224
+    batch_size: 16
+    top_k: 3
+    # Structure and visual agreement can verify an uncertain archive candidate.
+    min_support_score: 0.45
+    min_support_margin: 0.10
+    agreement_confirmation_enabled: true
+    agreement_min_text_score: 0.70
+    # score_gate uses a single calibrated DINO score boundary; legacy keeps score/margin consistency rules.
+    visual_only_decision_rule: score_gate
+    visual_only_confirmation_enabled: true
+    visual_only_min_observations: 1
+    visual_only_min_score: 0.80
+    visual_only_min_margin: 0.03
+    # A strong repeated candidate may confirm even when the Top-1/Top-2 margin is small.
+    visual_only_strong_score: 0.90
+    # Rejection requires both weak score and weak identity separation over repeated observations.
+    visual_only_reject_score: 0.80
+    visual_only_reject_margin: 0.08
+    conflict_min_score: 0.50
+    conflict_min_margin: 0.05
+    # These score gates must be calibrated separately for each visual backend.
+    out_of_archive_score: 0.50
+    out_of_archive_margin: 0.20
+    min_out_of_archive_observations: 2
+
+  experience:
+    enabled: true
+    top_k: 5
+    min_similarity: 0.60
+
+  # Normal operation keeps online profile and experience updates enabled.
+  # experiments.run_experiment overrides both to false unless --allow-memory-write is supplied.
+  memory_write:
+    profile: true
+    experience: true
+
+  policy:
+    uncertainty_threshold: 0.65
+    min_gap_frames: 45
+    fixed_interval_frames: 150
+    gray_zone_reobserve: true
+    max_queries_per_track: 3
+    max_queries_per_entity: 3
+    require_quality_improvement: true
+    min_quality_improvement: 0.03
+    min_confirmation_observations: 2
+    confirmation_retry_gap_frames: 120
+    risk_bonus: 0.20
+    archive_bonus: 0.10
+    experience_bonus: 0.10
+    quality_gain_weight: 0.25
+    new_tracklet_weight: 0.15
+    conflict_weight: 0.15
+    budget_penalty: 0.20
+
+  risk:
+    enabled: true
+    scale_growth_threshold: 0.012
+    image_motion_threshold: 0.10
+    persistence_frames: 15
+    identity_uncertainty_threshold: 0.70
+    multi_target_threshold: 3
+    medium_threshold: 0.30
+    high_threshold: 0.65
+
+  central_controller:
+    terminal_policy: multimodal_evidence
+    query_limit: 3
+    min_ooa_observations: 2
+    min_ooa_score: 0.50
+    max_control_steps: 12
+    max_episode_steps: 48
+    settlement_steps: 3
+    max_memory_views: 64
+    max_context_chars: 32000
+    diagnostics_enabled: true
+    diagnostics_dir: output/agent_diagnostics
+    diagnostics_max_bytes: 10000000
+    diagnostics_image_limit: 256
+    max_context_views: 4
+    max_context_evidence: 20
+    max_tokens: 1536
+    charge_failed_queries: true
+    max_workers: 4
+
+  network:
+    # Profiles can be overridden by experiments/run_experiment.py
+    profile: "lan"
+    simulate: false
+    latency_ms: 0
+    jitter_ms: 0
+    bandwidth_mbps: 100
+    failure_probability: 0.0
